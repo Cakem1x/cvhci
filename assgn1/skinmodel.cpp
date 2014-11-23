@@ -7,26 +7,27 @@
 class SkinProbMap {
   public:
     SkinProbMap() {
-      map = new cv::Mat1d(256, 256);
+      int sizes[] = {256, 256, 256};
+      map = new cv::Mat(3, sizes, CV_64FC1);
       total_skin = 0;
     }
 
     ~SkinProbMap(){}
 
-    double add_training_skin_pixel(cv::Vec3b ycrcb) {
+    double add_training_skin_pixel(cv::Vec3b bgr) {
       total_skin++;
-      map->at<double>(ycrcb[1], ycrcb[2]) += 1;
+      map->at<double>(bgr[0], bgr[1], bgr[2]) += 1;
 
-      return map->at<double>(ycrcb[1], ycrcb[2]);
+      return map->at<double>(bgr[0], bgr[1], bgr[2]);
     }
 
-    float test_skin_pixel(cv::Vec3b ycrcb) {
-       double div = map->at<double>(ycrcb[1], ycrcb[2]) / total_skin;
+    float test_skin_pixel(cv::Vec3b bgr) {
+       double div = map->at<double>(bgr[0], bgr[1], bgr[2]) / total_skin;
        return div;
     }
 
   private:
-    cv::Mat1d* map;
+    cv::Mat* map;
     double total_skin;
 };
 
@@ -58,13 +59,11 @@ void SkinModel::startTraining()
 /// @param mask: mask which specifies, which pixels are skin/non-skin
 void SkinModel::train(const cv::Mat3b& img, const cv::Mat1b& mask)
 {
-  cv::Mat3b img_ycrcb;
-  cv::cvtColor(img, img_ycrcb, CV_BGR2YCrCb);
   for (int row = 0; row < img.rows; ++row) {
     for (int col = 0; col < img.cols; ++col) {
       if (mask(row,col) == 255) {
-        double total_skin = voodoo->add_training_skin_pixel(img_ycrcb(row,col));
-        //std::cout << "Adding skin pixel at [" << (int)img_ycrcb(row,col)[1] << "," << (int)img_ycrcb(row,col)[2]  << "] , there were " << total_skin << "skin pixels with the same CrCb value." << std::endl;
+        double total_skin = voodoo->add_training_skin_pixel(img(row,col));
+        //std::cout << "Adding skin pixel at [" << (int)img(row,col)[0] << "," << (int)img(row,col)[1] << "," << (int)img(row,col)[2]  << "] , there were " << total_skin << "skin pixels with the same CrCb value." << std::endl;
       }
     }
   }
@@ -88,15 +87,13 @@ void SkinModel::finishTraining()
 cv::Mat1b SkinModel::classify(const cv::Mat3b& img)
 {
     cv::Mat1b skin = cv::Mat1b::zeros(img.rows, img.cols);
-    cv::Mat3b img_ycrcb;
-    cv::cvtColor(img, img_ycrcb, CV_BGR2YCrCb);
 
     for (int row = 0; row < img.rows; ++row) {
       for (int col = 0; col < img.cols; ++col) {
-        double skin_prob = voodoo->test_skin_pixel(img_ycrcb(row,col));
-        //std::cout << "Probability for skin at [" << (int)img_ycrcb(row,col)[1] << "," << (int)img_ycrcb(row,col)[2] << "] is " << skin_prob << std::endl;
-        if ((int)(skin_prob*10000) < 255) {
-          skin(row,col) = (int)(skin_prob*10000);
+        double skin_prob = voodoo->test_skin_pixel(img(row,col));
+        //std::cout << "Probability for skin at [" << (int)img(row,col)[0] << "," << (int)img(row,col)[1] << "," << (int)img(row,col)[2] << "] is " << skin_prob << std::endl;
+        if ((int)(skin_prob*700000) < 255) {
+          skin(row,col) = (int)(skin_prob*700000);
         } else {
           skin(row,col) = 255;
         }
