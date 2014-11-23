@@ -95,7 +95,9 @@ cv::Mat1b SkinModel::classify(const cv::Mat3b& img)
       for (int col = 0; col < img.cols; ++col) {
         double skin_prob = voodoo->test_skin_pixel(img_ycrcb(row,col));
         //std::cout << "Probability for skin at [" << (int)img_ycrcb(row,col)[1] << "," << (int)img_ycrcb(row,col)[2] << "] is " << skin_prob << std::endl;
-        if (skin_prob > 0.004) {
+        if ((int)(skin_prob*10000) < 255) {
+          skin(row,col) = (int)(skin_prob*10000);
+        } else {
           skin(row,col) = 255;
         }
 			}
