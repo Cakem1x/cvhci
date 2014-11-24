@@ -9,7 +9,7 @@ class SkinProbMap {
   public:
     SkinProbMap() {
       int sizes[] = {256, 256, 256};
-      map = new cv::Mat(3, sizes, CV_64FC2);
+      map = new cv::Mat(3, sizes, CV_16UC2);
       total_skin = 0;
       total_non_skin = 0;
     }
@@ -18,8 +18,8 @@ class SkinProbMap {
 
     /// Adds a training point bgr with the information whether or not this point is a skin point
     /// @returns the number of pixels with which this model has already been trained.
-    double add_training_skin_pixel(cv::Vec3b bgr, bool is_skin) {
-      cv::Vec2d* color_point = &(map->at<cv::Vec2d>(bgr[0], bgr[1], bgr[2]));
+    int add_training_skin_pixel(cv::Vec3b bgr, bool is_skin) {
+      cv::Vec<unsigned short, 2>* color_point = &(map->at <cv::Vec<unsigned short, 2> > (bgr[0], bgr[1], bgr[2]));
       if (is_skin) {
         total_skin++;
         (*color_point)[0] += 1;
@@ -27,6 +27,8 @@ class SkinProbMap {
         total_non_skin++;
       }
       (*color_point)[1] += 1;
+
+      //std::cout << "Total skin + total_non_skin is " << total_skin + total_non_skin << std::endl;
 
       return total_skin + total_non_skin;
     }
@@ -40,11 +42,11 @@ class SkinProbMap {
       double P_S_X, P_X_S, P_X, P_S; // P(S|X), P(X|S), P(X), P(S)
       assert(total_skin > 0);
       assert(total_non_skin > 0);
-      cv::Vec2d color_point = map->at<cv::Vec2d>(bgr[0], bgr[1], bgr[2]);
+      cv::Vec<unsigned short, 2> color_point = map->at<cv::Vec<unsigned short, 2> >(bgr[0], bgr[1], bgr[2]);
 
-      P_X_S = color_point[0] / total_skin;
-      P_X = color_point[1] / (total_non_skin + total_skin);
-      P_S = total_skin / (total_non_skin + total_skin);
+      P_X_S = (double)color_point[0] / (double)total_skin;
+      P_X = (double)color_point[1] / (double)(total_non_skin + total_skin);
+      P_S = (double)total_skin / (double)(total_non_skin + total_skin);
       P_S_X = (P_X_S/P_X)*P_S;
 
       //std::cout << "P(S|X) = P(X|S) / P(X) * P(S) = " << P_S_X << " = " << P_X_S << " / " << P_X << " * " << P_S << std::endl;
@@ -54,8 +56,8 @@ class SkinProbMap {
   private:
     /// First channel counts how many skin pixels there were with this color, second channel counts how man pixels there were with this color in total.
     cv::Mat* map;
-    double total_skin;
-    double total_non_skin;
+    int total_skin;
+    int total_non_skin;
 };
 
 /// Constructor
