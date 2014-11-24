@@ -1,6 +1,7 @@
 #include "skinmodel.h"
 #include <cmath>
 #include <iostream>
+#include <assert.h>
 
 #define voodoo ((SkinProbMap*) pimpl)
 
@@ -8,27 +9,53 @@ class SkinProbMap {
   public:
     SkinProbMap() {
       int sizes[] = {256, 256, 256};
-      map = new cv::Mat(3, sizes, CV_64FC1);
+      map = new cv::Mat(3, sizes, CV_64FC2);
       total_skin = 0;
+      total_non_skin = 0;
     }
 
     ~SkinProbMap(){}
 
-    double add_training_skin_pixel(cv::Vec3b bgr) {
-      total_skin++;
-      map->at<double>(bgr[0], bgr[1], bgr[2]) += 1;
+    /// Adds a training point bgr with the information whether or not this point is a skin point
+    /// @returns the number of pixels with which this model has already been trained.
+    double add_training_skin_pixel(cv::Vec3b bgr, bool is_skin) {
+      cv::Vec2d* color_point = &(map->at<cv::Vec2d>(bgr[0], bgr[1], bgr[2]));
+      if (is_skin) {
+        total_skin++;
+        (*color_point)[0] += 1;
+      } else {
+        total_non_skin++;
+      }
+      (*color_point)[1] += 1;
 
-      return map->at<double>(bgr[0], bgr[1], bgr[2]);
+      return total_skin + total_non_skin;
     }
 
-    float test_skin_pixel(cv::Vec3b bgr) {
-       double div = map->at<double>(bgr[0], bgr[1], bgr[2]) / total_skin;
-       return div;
+    double add_training_non_skin_pixel() {
+      return total_non_skin++;
+    }
+
+    /// Returns the probability for Skin (S) for a given color (X), so P(S|X).
+    double test_skin_pixel(cv::Vec3b bgr) {
+      double P_S_X, P_X_S, P_X, P_S; // P(S|X), P(X|S), P(X), P(S)
+      assert(total_skin > 0);
+      assert(total_non_skin > 0);
+      cv::Vec2d color_point = map->at<cv::Vec2d>(bgr[0], bgr[1], bgr[2]);
+
+      P_X_S = color_point[0] / total_skin;
+      P_X = color_point[1] / (total_non_skin + total_skin);
+      P_S = total_skin / (total_non_skin + total_skin);
+      P_S_X = (P_X_S/P_X)*P_S;
+
+      //std::cout << "P(S|X) = P(X|S) / P(X) * P(S) = " << P_S_X << " = " << P_X_S << " / " << P_X << " * " << P_S << std::endl;
+      return P_S_X; // = P(S|X)
     }
 
   private:
+    /// First channel counts how many skin pixels there were with this color, second channel counts how man pixels there were with this color in total.
     cv::Mat* map;
     double total_skin;
+    double total_non_skin;
 };
 
 /// Constructor
@@ -61,10 +88,8 @@ void SkinModel::train(const cv::Mat3b& img, const cv::Mat1b& mask)
 {
   for (int row = 0; row < img.rows; ++row) {
     for (int col = 0; col < img.cols; ++col) {
-      if (mask(row,col) == 255) {
-        double total_skin = voodoo->add_training_skin_pixel(img(row,col));
-        //std::cout << "Adding skin pixel at [" << (int)img(row,col)[0] << "," << (int)img(row,col)[1] << "," << (int)img(row,col)[2]  << "] , there were " << total_skin << "skin pixels with the same CrCb value." << std::endl;
-      }
+      // train for pixel at img(row,col)
+      voodoo->add_training_skin_pixel(img(row,col), mask(row,col) == 255);
     }
   }
 }
@@ -90,10 +115,9 @@ cv::Mat1b SkinModel::classify(const cv::Mat3b& img)
 
     for (int row = 0; row < img.rows; ++row) {
       for (int col = 0; col < img.cols; ++col) {
-        double skin_prob = voodoo->test_skin_pixel(img(row,col));
-        //std::cout << "Probability for skin at [" << (int)img(row,col)[0] << "," << (int)img(row,col)[1] << "," << (int)img(row,col)[2] << "] is " << skin_prob << std::endl;
-        if ((int)(skin_prob*700000) < 255) {
-          skin(row,col) = (int)(skin_prob*700000);
+        double P_X_S = voodoo->test_skin_pixel(img(row,col)); //P(X|S)
+        if ((int)(P_X_S*100) < 255) {
+          skin(row,col) = (int)(P_X_S*100);
         } else {
           skin(row,col) = 255;
         }
