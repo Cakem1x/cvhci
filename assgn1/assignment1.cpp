@@ -33,7 +33,8 @@ int main(int argc, char* argv[]) {
 			("gui,s", "Enable the GUI")
 			("out,o", po::value<string>(), "Path where to write the results")
 			("path", po::value<string>()->default_value("."), "Path where to read input data")
-			("debug,d", po::value<string>(), "To apply the classification to just one image and displays the result in an opencv window. Give a path to the image to test with.");
+			("debug,d", po::value<string>(), "To apply the classification to just one image and displays the result in an opencv window. Give a path to the image to test with.")
+      ("debug-all,a", "Displays windows for debugging for all test images.");
 
 		po::positional_options_description pop;
 		pop.add("path", -1);
@@ -100,6 +101,17 @@ int main(int argc, char* argv[]) {
 
       cv::Mat1b mask = cv::imread(path+"/test/mask-"+f,0);
 
+      /// Display debug windows for each test image if desired
+      if (pom.count("debug-all")) {
+        char key = 0;
+        cv::imshow("img", img);
+        cv::imshow("mask", mask);
+        cv::imshow("hyp", hyp);
+        while (key != 'q') {
+          key = cv::waitKey(0);
+        }
+      }
+
       for (int i=0; i<hyp.rows; i++)
         for (int j=0; j<hyp.cols; j++)
           roc.add(mask(i,j)>127, hyp(i,j));
@@ -109,7 +121,7 @@ int main(int argc, char* argv[]) {
     roc.update();
     
     cout << "Overall F1 score: " << roc.F1 << endl;
-    
+
     /// Display final result if desired
     if (pom.count("gui")) {
       char key = 0;
