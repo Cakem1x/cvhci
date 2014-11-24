@@ -118,6 +118,7 @@ cv::Mat1b SkinModel::classify(const cv::Mat3b& img)
     for (int row = 0; row < img.rows; ++row) {
       for (int col = 0; col < img.cols; ++col) {
         double P_X_S = voodoo->test_skin_pixel(img(row,col)); //P(X|S)
+        // Scale the probability to somewhere between 0 and 255:
         if ((int)(P_X_S*100) < 255) {
           skin(row,col) = (int)(P_X_S*100);
         } else {
