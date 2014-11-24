@@ -116,25 +116,25 @@ void SkinModel::finishTraining()
 /// @return:    probability mask of skin color likelihood
 cv::Mat1b SkinModel::classify(const cv::Mat3b& img)
 {
-    // do some pre processing before detecting the skin pixels
-    cv::GaussianBlur(img, img, cv::Size(3, 3), 0, 0);
+  // do some pre processing before detecting the skin pixels
+  cv::GaussianBlur(img, img, cv::Size(3, 3), 0, 0);
 
-    cv::Mat1b skin = cv::Mat1b::zeros(img.rows, img.cols);
+  cv::Mat1b skin = cv::Mat1b::zeros(img.rows, img.cols);
 
-    // skin detection per pixel
-    for (int row = 0; row < img.rows; ++row) {
-      for (int col = 0; col < img.cols; ++col) {
-        double P_X_S = voodoo->test_skin_pixel(img(row,col)); //P(X|S)
-        // Scale the probability to somewhere between 0 and 255:
-        if ((int)(P_X_S*100) < 255) {
-          skin(row,col) = (int)(P_X_S*100);
-        } else {
-          skin(row,col) = 255;
-        }
-			}
+  // skin detection per pixel
+  for (int row = 0; row < img.rows; ++row) {
+    for (int col = 0; col < img.cols; ++col) {
+      double P_X_S = voodoo->test_skin_pixel(img(row,col)); //P(X|S)
+      // Scale the probability to somewhere between 0 and 255:
+      if ((int)(P_X_S*100) < 255) {
+        skin(row,col) = (int)(P_X_S*100);
+      } else {
+        skin(row,col) = 255;
+      }
     }
+  }
 
-    // do some post processing on the detected skin pixels
-    return skin;
+  // do some post processing on the detected skin pixels
+  return skin;
 }
 
