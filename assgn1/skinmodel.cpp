@@ -125,12 +125,6 @@ cv::Mat1b SkinModel::classify(const cv::Mat3b& img)
     }
   }
 
-  // Region growing based on the probabilities
-  // RegionGrower rg(prob_field);
-  // int nr_seeds = rg.find_seeds(0.96);
-  // std::cout << "Found " << nr_seeds << " seeds. Starting region growing algorithm now." << std::endl;
-  // prob_field = rg.grow(0.7);
-
   // Convert the probabilities to a value between 0 and 255
   for (int row = 0; row < img.rows; ++row) {
     for (int col = 0; col < img.cols; ++col) {
@@ -145,7 +139,7 @@ cv::Mat1b SkinModel::classify(const cv::Mat3b& img)
 
   // do some post processing on the detected skin pixels
   cv::erode(skin, skin, cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(3, 3)));
-  //cv::GaussianBlur(skin, skin, cv::Size(3, 3), 2);
+  cv::GaussianBlur(skin, skin, cv::Size(3, 3), 2);
   cv::dilate(skin, skin, cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(20, 20)));
   cv::erode(skin, skin, cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(20, 20)));
 
