@@ -5,10 +5,10 @@ FLAGS += -Wall -Wextra -pedantic
 FLAGS += -Ofast
 #FLAGS += -D__OPENCV_OBJDETECT_HPP__
 FLAGS +=  `pkg-config opencv --cflags --libs`
-FLAGS +=  -lboost_system -lboost_program_options -lboost_serialization -lboost_filesystem
+FLAGS +=  -ggdb -lboost_system -lboost_program_options -lboost_serialization -lboost_filesystem
 
 assignment2: *.cpp *.h
-	$(CXX) -o -ggdb $@ assignment2.cpp hog.cpp $(FLAGS)
+	$(CXX) -o $@ assignment2.cpp hog.cpp $(FLAGS)
 
 .PHONY : clean
 clean:
