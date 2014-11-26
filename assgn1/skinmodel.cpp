@@ -47,7 +47,7 @@ class SkinProbMap {
       P_X_S = (double)color_point[0] / (double)total_skin;
       P_X = (double)color_point[1] / (double)(total_non_skin + total_skin);
       P_S = (double)total_skin / (double)(total_non_skin + total_skin);
-      P_S_X = (P_X_S/P_X)*P_S;
+      P_S_X = (P_X != 0) ? (P_X_S/P_X)*P_S : 0;
 
       //std::cout << "P(S|X) = P(X|S) / P(X) * P(S) = " << P_S_X << " = " << P_X_S << " / " << P_X << " * " << P_S << std::endl;
       return P_S_X; // = P(S|X)
@@ -114,26 +114,40 @@ void SkinModel::finishTraining()
 cv::Mat1b SkinModel::classify(const cv::Mat3b& img)
 {
   cv::Mat1b skin = cv::Mat1b::zeros(img.rows, img.cols);
+  cv::Mat1d prob_field = cv::Mat1d::zeros(img.rows, img.cols);
 
-  // skin detection per pixel
+  // get the probability of skin per pixel
   for (int row = 0; row < img.rows; ++row) {
     for (int col = 0; col < img.cols; ++col) {
-      double P_X_S = voodoo->test_skin_pixel(img(row,col)); //P(X|S)
-      // Scale the probability to somewhere between 0 and 255:
-      if ((int)(P_X_S*100) < 255) {
-        skin(row,col) = (int)(P_X_S*100);
+      cv::Vec3b bgr = img(row,col);
+      prob_field(row,col) = voodoo->test_skin_pixel(bgr); //P(X|S)
+      // std::cout << "P([" << (int)(int)bgr[0] << "," << (int)bgr[1] << "," << (int)bgr[2] << "," << "]|S) = " << prob_field(row,col) << std::endl;
+    }
+  }
+
+  // Region growing based on the probabilities
+  // RegionGrower rg(prob_field);
+  // int nr_seeds = rg.find_seeds(0.96);
+  // std::cout << "Found " << nr_seeds << " seeds. Starting region growing algorithm now." << std::endl;
+  // prob_field = rg.grow(0.7);
+
+  // Convert the probabilities to a value between 0 and 255
+  for (int row = 0; row < img.rows; ++row) {
+    for (int col = 0; col < img.cols; ++col) {
+      int scaled_val = (int)((prob_field(row, col)*255.0)+0.5);
+      if (scaled_val <= 255) {
+        skin(row,col) = scaled_val;
       } else {
-        skin(row,col) = 255;
+        std::cout << "Warning: scaled_val is " << scaled_val << " (>255), image now has broken pixels." << std::endl;
       }
     }
   }
 
   // do some post processing on the detected skin pixels
-  cv::erode(skin, skin, cv::getStructuringElement(cv::MORPH_RECT, cv::Size(3, 3)));
-  cv::GaussianBlur(skin, skin, cv::Size(3, 3), 2);
+  cv::erode(skin, skin, cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(3, 3)));
+  //cv::GaussianBlur(skin, skin, cv::Size(3, 3), 2);
   cv::dilate(skin, skin, cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(20, 20)));
   cv::erode(skin, skin, cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(20, 20)));
-
 
   return skin;
 }
