@@ -56,10 +56,10 @@ int main(int argc, char* argv[]) {
 		for (fs::directory_iterator it(fs::path(path+"/train/n")); it!=fs::directory_iterator(); it++)
 			if (is_regular_file(*it))
 				trainImgs.push_back({it->path().filename().string(),0});
-		for (fs::directory_iterator it(fs::path(path+"/test/p")); it!=fs::directory_iterator(); it++)
+		for (fs::directory_iterator it(fs::path(path+"/testPublic/p")); it!=fs::directory_iterator(); it++)
 			if (is_regular_file(*it))
 				testImgs.push_back({it->path().filename().string(),1});
-		for (fs::directory_iterator it(fs::path(path+"/test/n")); it!=fs::directory_iterator(); it++)
+		for (fs::directory_iterator it(fs::path(path+"/testPublic/n")); it!=fs::directory_iterator(); it++)
 			if (is_regular_file(*it))
 				testImgs.push_back({it->path().filename().string(),0});
 
@@ -88,10 +88,10 @@ int main(int argc, char* argv[]) {
     /// test model with all images in the test folder, 
 	ROC<double> roc;
 	for (auto &f:testImgs) {
-		cv::Mat3b img = cv::imread(path+"/test/"+"np"[f.second]+"/"+f.first,-1);
+		cv::Mat3b img = cv::imread(path+"/testPublic/"+"np"[f.second]+"/"+f.first,-1);
 		double hyp = model.classify(img);
 		roc.add(f.second, hyp);
-		cout << "Testing Image " << f.second << " " << hyp << " " << path+"/test/"+"np"[f.second]+"/"+f.first << endl;
+		cout << "Testing Image " << f.second << " " << hyp << " " << path+"/testPublic/"+"np"[f.second]+"/"+f.first << endl;
 	}
 	
 	/// After training, update statistics and show results
